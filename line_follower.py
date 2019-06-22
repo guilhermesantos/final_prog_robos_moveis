@@ -73,7 +73,7 @@ def segment_image(frame):
 
     midpoints = np.zeros((frame.shape[1]))
 
-    black_stripe = np.argwhere(thresh_frame == 0)
+    '''black_stripe = np.argwhere(thresh_frame == 0)
     for y in range(frame.shape[1]):
         horiz_stripe = np.argwhere(thresh_frame[y,:] == 0)
         if(horiz_stripe.size > 0):
@@ -83,8 +83,8 @@ def segment_image(frame):
             thresh_frame[y, midpoint-5:midpoint+5] = 127
             midpoints[y] = midpoint
         else:
-            midpoints[y] = -1
-
+            midpoints[y] = -1'''
+    midpoints = None
     return thresh_frame, midpoints
 
 
@@ -97,13 +97,13 @@ def process_capture(capture, show_frame, robot):
         
         ret, frame = capture.read()
         frame = cv2.resize(frame, (400, 400))
+        frame = frame[:200, :,:]
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray_frame = cv2.GaussianBlur(gray_frame, (5,5), 0)
         
         segmented_image, line_midpoints = segment_image(gray_frame)
         contours,hierarchy = cv2.findContours(segmented_image.copy(), 1, cv2.CHAIN_APPROX_NONE)
         
-        frame_center = frame.shape[0]/2
         if(len(contours) > 0):
             c = max(contours, key=cv2.contourArea)
             M = cv2.moments(c)
@@ -111,19 +111,25 @@ def process_capture(capture, show_frame, robot):
             cy = int(M['m01']/M['m00'])
             cv2.line(frame,(cx,0),(cx,720),(255,0,0),1)
             cv2.line(frame,(0,cy),(1280,cy),(255,0,0),1)
+            
+            rows, cols = frame.shape[:2]
+            [vx, vy, x, y] = cv2.fitLine(c, cv2.DIST_L2, 0, 0.01, 0.01)
+            
+            lefty = int((-x*vy/vx)+y)
+            righty = int((cols-x)*vy/vx+y)
+            cv2.line(frame,(cols-1,righty),(0,lefty),(0,255,0),2)
             #cv2.drawContours(frame, contours, -1, (0,255,0), 1)
             
-            if(current_time - last_step > 0.2):
-                last_step = timer() 
-                print('cx',cx)
+            if(current_time - last_step > 0):
+                last_step = timer()
+                frame_center = frame.shape[1]/2
+                
                 if(cx < frame_center-(frame_center/4)):
                     print('turn left')
                     robot.left()
-                    time.sleep(0.4)
                 elif(cx > frame_center+(frame_center/4)):
                     print('turn right')
                     robot.right()
-                    time.sleep(0.4)
                 else:
                     print('forward')
                     robot.forward()
@@ -147,8 +153,8 @@ def process_capture(capture, show_frame, robot):
         
 
         if(show_frame):
-            #cv2.imshow('Capture', frame)
-            print('hiding frame')
+            cv2.imshow('Capture', frame)
+            #print('hiding frame')
 
         if(cv2.waitKey(1) & 0xFF == ord('q')):
             break
@@ -165,7 +171,7 @@ def main():
     time.sleep(10)
     print('waking up')
 
-    robot.set_speed(0.8)
+    robot.set_speed(1.0)
     
     capture = start_video_capture(0)
     process_capture(capture, True, robot)

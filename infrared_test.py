@@ -1,7 +1,7 @@
 from gpiozero import Button, LineSensor
 from signal import pause
 from motor import Robot
-
+import time
 
 def main():
     left_sensor = Button(14)
@@ -12,17 +12,17 @@ def main():
     #pause()
     while(True):
         if(left_sensor.is_pressed and not right_sensor.is_pressed):
-            print('turning right')
-            #robot.right()
+            #print('turning right')
+            robot.right()
         elif(not left_sensor.is_pressed and right_sensor.is_pressed):
-            print('turning left')
-            #robot.left()
+            #print('turning left')
+            robot.left()
         elif(not left_sensor.is_pressed and not right_sensor.is_pressed):
-            print('on the line (moving forward)')
-            #robot.forward()
+            #print('on the line (moving forward)')
+            robot.forward()
         elif(left_sensor.is_pressed and right_sensor.is_pressed):
-           print('off of the line (moving forward)')
-           #robot.forward()
+           #print('off of the line (moving forward)')
+           robot.forward()
             
 if __name__ == '__main__':
     robot = Robot(2, 3, 4,
@@ -30,4 +30,8 @@ if __name__ == '__main__':
               26, 19, 5,
               6, 13, 0)
     robot.stop()
+    print('sleeping')
+    time.sleep(15)
+    print('waking up')
+    robot.set_speed(1.0)
     main()
