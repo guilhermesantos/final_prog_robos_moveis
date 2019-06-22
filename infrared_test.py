@@ -31,7 +31,7 @@ if __name__ == '__main__':
               6, 13, 0)
     robot.stop()
     print('sleeping')
-    time.sleep(15)
+    time.sleep(5)
     print('waking up')
     robot.set_speed(1.0)
     main()

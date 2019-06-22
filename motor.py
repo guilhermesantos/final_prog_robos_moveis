@@ -43,6 +43,11 @@ class Robot():
         self.up_left_motor_a.off()
         self.up_left_motor_b.on()
         
+        self.down_left_spd_pin.value = self.spd
+        self.down_right_spd_pin.value = self.spd
+        self.up_right_motor_spd_pin.value = self.spd
+        self.up_left_motor_spd_pin.value = self.spd        
+    
     def left(self):
         self.down_left_a.off()
         self.down_left_b.on()
@@ -55,6 +60,11 @@ class Robot():
         
         self.up_left_motor_a.on()
         self.up_left_motor_b.off()
+        
+        self.down_left_spd_pin.value = self.spd
+        self.down_right_spd_pin.value = self.spd
+        self.up_right_motor_spd_pin.value = self.spd
+        self.up_left_motor_spd_pin.value = self.spd  
             
     def right(self):
         self.down_left_a.on()
@@ -69,6 +79,11 @@ class Robot():
         self.up_left_motor_a.off()
         self.up_left_motor_b.on()
         
+        self.down_left_spd_pin.value = self.spd
+        self.down_right_spd_pin.value = self.spd
+        self.up_right_motor_spd_pin.value = self.spd
+        self.up_left_motor_spd_pin.value = self.spd  
+        
     def backwards(self):
         self.down_left_a.off()
         self.down_left_b.on()
@@ -82,6 +97,11 @@ class Robot():
         self.up_left_motor_a.on()
         self.up_left_motor_b.off()
         
+        self.down_left_spd_pin.value = self.spd
+        self.down_right_spd_pin.value = self.spd
+        self.up_right_motor_spd_pin.value = self.spd
+        self.up_left_motor_spd_pin.value = self.spd  
+        
     def stop(self):
         self.down_left_a.off()
         self.down_left_b.off()
@@ -94,7 +114,43 @@ class Robot():
         
         self.up_left_motor_a.off()
         self.up_left_motor_b.off()
+
+    def left_curve(self):        
+        self.down_left_a.off()
+        self.down_left_b.on()
         
+        self.down_right_a.off()
+        self.down_right_b.on()
+        
+        self.up_right_motor_a.off()
+        self.up_right_motor_b.on()
+        
+        self.up_left_motor_a.on()
+        self.up_left_motor_b.off()
+        
+        self.down_left_spd_pin.value = self.spd
+        self.down_right_spd_pin.value = self.spd * 0.75
+        self.up_right_motor_spd_pin.value = self.spd * 0.75
+        self.up_left_motor_spd_pin.value = self.spd
+    
+    def right_curve(self):
+        self.down_left_a.on()
+        self.down_left_b.off()
+        
+        self.down_right_a.on()
+        self.down_right_b.off()
+        
+        self.up_right_motor_a.on()
+        self.up_right_motor_b.off()
+        
+        self.up_left_motor_a.off()
+        self.up_left_motor_b.on()
+        
+        self.down_left_spd_pin.value = self.spd * 0.75
+        self.down_right_spd_pin.value = self.spd 
+        self.up_right_motor_spd_pin.value = self.spd 
+        self.up_left_motor_spd_pin.value = self.spd * 0.75
+
     def set_speed(self, spd):
         self.spd = spd
         self.down_left_spd_pin.value = spd
