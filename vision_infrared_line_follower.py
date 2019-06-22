@@ -47,21 +47,21 @@ def detect_blobs(frame):
     return kp_frame
 
 def segment_image(frame):
-    do_otsu = True
+    do_otsu = False
     if(do_otsu):
         ret, thresh_frame = cv2.threshold(frame, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         thresh_frame = np.invert(thresh_frame)
         #ret, thresh_frame = cv2.threshold(gray_frame, 60, 255, cv2.THRESH_BINARY_INV)
     else:
         thresh_frame = frame.copy()
-        thresh = 140
-        white_pixels = thresh_frame > thresh
-        black_pixels = thresh_frame <= thresh
+        thresh = 60
+        white_pixels = thresh_frame <= thresh
+        black_pixels = thresh_frame > thresh
         thresh_frame[white_pixels] = 255
         thresh_frame[black_pixels] = 0
         frame = thresh_frame
 
-    midpoints = np.zeros((frame.shape[1]))
+    #midpoints = np.zeros((frame.shape[1]))
 
     '''black_stripe = np.argwhere(thresh_frame == 0)
     for y in range(frame.shape[1]):
@@ -91,8 +91,17 @@ def process_capture(capture, show_frame, robot):
         ret, frame = capture.read()
         frame = cv2.resize(frame, (400, 400))
         frame = frame[:200, :,:]
+        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        #print('original hs frame shape', hsv_frame.shape)
+        #print('hsv frame shape', (hsv_frame[:,:,1]<60).shape)
+                
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray_frame = cv2.GaussianBlur(gray_frame, (5,5), 0)
+        #print('gray frame shape', gray_frame.shape)
+        
+        lower_black = np.array([0,0,0])
+        upper_black = np.array([80,255,70])
+        #segmented_image = cv2.inRange(hsv_frame, lower_black, upper_black)
         
         segmented_image, line_midpoints = segment_image(gray_frame)
         contours,hierarchy = cv2.findContours(segmented_image.copy(), 1, cv2.CHAIN_APPROX_NONE)
@@ -100,6 +109,8 @@ def process_capture(capture, show_frame, robot):
         if(len(contours) > 0):
             c = max(contours, key=cv2.contourArea)
             M = cv2.moments(c)
+            if(M['m00'] == 0.0):
+                continue
             cx = int(M['m10']/M['m00'])
             cy = int(M['m01']/M['m00'])
             cv2.line(frame,(cx,0),(cx,720),(255,0,0),1)
@@ -170,7 +181,7 @@ def main():
     #config_dict = load_board_setup()
     #setup_pins(config_dict)
     print('sleeping')
-    time.sleep(5)
+    time.sleep(1)
     print('waking up')
 
     robot.set_speed(1.0)
