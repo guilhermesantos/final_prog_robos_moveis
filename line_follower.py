@@ -3,6 +3,7 @@ import numpy as np
 from motor import Robot
 import time
 from timeit import default_timer as timer
+import math
 
 
 def load_board_setup():
@@ -57,16 +58,16 @@ def detect_blobs(frame):
     return kp_frame
 
 def segment_image(frame):
-    do_otsu = True
+    do_otsu = False
     if(do_otsu):
         ret, thresh_frame = cv2.threshold(frame, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         thresh_frame = np.invert(thresh_frame)
         #ret, thresh_frame = cv2.threshold(gray_frame, 60, 255, cv2.THRESH_BINARY_INV)
     else:
         thresh_frame = frame.copy()
-        thresh = 140
-        white_pixels = thresh_frame > thresh
-        black_pixels = thresh_frame <= thresh
+        thresh = 60
+        white_pixels = thresh_frame <= thresh
+        black_pixels = thresh_frame > thresh
         thresh_frame[white_pixels] = 255
         thresh_frame[black_pixels] = 0
         frame = thresh_frame
@@ -94,19 +95,38 @@ def process_capture(capture, show_frame, robot):
     
     while(capture.isOpened()):
         current_time = timer()
-        
         ret, frame = capture.read()
         frame = cv2.resize(frame, (400, 400))
-        frame = frame[:200, :,:]
+        
+
+                    
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray_frame = cv2.GaussianBlur(gray_frame, (5,5), 0)
         
-        segmented_image, line_midpoints = segment_image(gray_frame)
-        contours,hierarchy = cv2.findContours(segmented_image.copy(), 1, cv2.CHAIN_APPROX_NONE)
         
+        lower_black = np.array([0,0,0])
+        upper_black = np.array([80,255,70])
+        
+        
+        segmented_image, line_midpoints = segment_image(gray_frame)
+        
+        
+        contours,hierarchy = cv2.findContours(segmented_image.copy(), 1, cv2.CHAIN_APPROX_NONE)
+    
+    
         if(len(contours) > 0):
+            robot.set_speed(0.2)
+            debug = False
+
             c = max(contours, key=cv2.contourArea)
             M = cv2.moments(c)
+            if(M['m00'] == 0.0):
+                if(debug):
+                    print('Didn\'t detect anything. forward')
+                else:
+                    robot.forward()
+                continue
+            
             cx = int(M['m10']/M['m00'])
             cy = int(M['m01']/M['m00'])
             cv2.line(frame,(cx,0),(cx,720),(255,0,0),1)
@@ -117,41 +137,55 @@ def process_capture(capture, show_frame, robot):
             
             lefty = int((-x*vy/vx)+y)
             righty = int((cols-x)*vy/vx+y)
-            cv2.line(frame,(cols-1,righty),(0,lefty),(0,255,0),2)
-            #cv2.drawContours(frame, contours, -1, (0,255,0), 1)
-            
-            if(current_time - last_step > 0):
-                last_step = timer()
-                frame_center = frame.shape[1]/2
-                
-                if(cx < frame_center-(frame_center/4)):
-                    print('turn left')
-                    robot.left()
-                elif(cx > frame_center+(frame_center/4)):
-                    print('turn right')
-                    robot.right()
-                else:
-                    print('forward')
-                    robot.forward()
-            else:
-                robot.stop()
-            
-        '''y_lowest_midpoint = int(line_midpoints[line_midpoints != -1].shape[0])
-        x_lowest_midpoint = int(line_midpoints[y_lowest_midpoint-1])
-        
-        y_highest_midpoint = int(line_midpoints[line_midpoints != -1][0])
-        x_highest_midpoint = int(line_midpoints[y_highest_midpoint])
-        
-        frame[segmented_image == 0, 0] = 0
-        frame[segmented_image == 0, 1] = 255
-        frame[segmented_image == 0, 2] = 0
-        frame[segmented_image == 127, :] = 255#Destaca o ponto medio
-        
-        frame[y_lowest_midpoint-5:y_lowest_midpoint-1, x_lowest_midpoint-5:x_lowest_midpoint-1, :] = [255, 0, 0]
-        frame[y_highest_midpoint-5:y_highest_midpoint-1, x_highest_midpoint-5:x_highest_midpoint-1, :] = [255, 0, 0]
-        '''
-        
 
+            #if(righty > lefty):
+            #    print('reta descendo')
+            #elif(righty < lefty):
+            #    print('reta subindo')
+            try:
+                cv2.line(frame,(cols-1,righty),(0,lefty),(0,255,0),2)
+            #cv2.drawContours(frame, contours, -1, (0,255,0), 1)
+            except OverflowError:
+                print('overflow error ocurred. ignoring...')
+            
+            frame_center = frame.shape[1]/2
+            #if(current_time - last_step > 1.0):
+            last_step = timer()
+            error = (frame_center-x)/frame_center
+            
+            print('normalized error = ', error)
+            print('speed = ', 0.2+math.fabs(error))
+            k = 0.25
+            min_error = 0.2
+            min_spd = 0.1
+            if(math.fabs(error) < min_error):
+                robot.set_speed(0.2)
+                robot.forward()
+                print('forward')
+                #robot.stop()
+                #robot.set_speed(0.5)
+            elif(cx < frame_center-(frame_center/4)):
+                print('vision left')
+                robot.set_speed(min_spd+k*math.fabs(error))
+                robot.left()
+            elif(cx > frame_center+(frame_center/4)):
+                robot.set_speed(min_spd+k*math.fabs(error))
+                print('vision right')
+                robot.right()
+            else:
+                robot.set_speed(0.2)
+                robot.forward()
+                print('vision forward')
+                #robot.forward()
+                #robot.stop()
+        else:
+            #if(current_time - last_step > 1.0):
+            last_step = timer()
+            print('not seeing anything')
+            #robot.forward()
+            #robot.stop()
+         
+        show_frame = True
         if(show_frame):
             cv2.imshow('Capture', frame)
             #print('hiding frame')
@@ -168,13 +202,13 @@ def main():
     #config_dict = load_board_setup()
     #setup_pins(config_dict)
     print('sleeping')
-    time.sleep(10)
+    time.sleep(1)
     print('waking up')
 
     robot.set_speed(1.0)
     
     capture = start_video_capture(0)
-    process_capture(capture, True, robot)
+    process_capture(capture, False, robot)
     kill_video_capture(capture)
 
 if __name__ == '__main__':

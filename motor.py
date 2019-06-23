@@ -23,7 +23,7 @@ class Robot():
         self.up_left_motor_b = LED(motor4_b)
         self.up_left_motor_spd_pin = PWMLED(motor4_spd_pin)
         
-        self.spd = 0.4
+        self.spd = 1.0
         self.down_left_spd_pin.value = self.spd
         self.down_right_spd_pin.value = self.spd
         self.up_right_motor_spd_pin.value = self.spd
